@@ -279,7 +279,7 @@ RESOURCE_ATTRIBUTE_MAP = {
                                     'is_visible': True,
                                     'default': None},
         'flavor': {'allow_post': True, 'allow_put': True,
-                   'validate': {'type:range': [1, 6]},
+                   'validate': {'type:range': [1, 13]},
                    'default': 1,
                    'convert_to': converters.convert_to_int,
                    'is_visible': True},
