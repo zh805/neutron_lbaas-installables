@@ -32,6 +32,7 @@ def upgrade():
         'lbaas_loadbalanceragentbindings',
         sa.Column('loadbalancer_id', sa.String(length=36), nullable=False),
         sa.Column('agent_id', sa.String(length=36), nullable=False),
+        sa.Column('device_id', sa.String(length=36), nullable=True),
         sa.ForeignKeyConstraint(['loadbalancer_id'],
                                 ['lbaas_loadbalancers.id'],
                                 ondelete='CASCADE'),
