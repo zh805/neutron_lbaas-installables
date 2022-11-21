@@ -219,7 +219,15 @@ def _validate_az_list_or_none(data, max_len=None):
         return validators.validate_list_of_unique_strings(data, max_len)
 
 
+def _validate_keepalive_timeout_range(data, value=None):
+    if data != -1 and data not in range(1, 3601):
+        msg = (_("Notice: keepalive_timeout support -1, and [1, 3600],"
+                 "while the input keepalive_timeout is %s") % data)
+        raise nexception.InvalidInput(error_message=msg)
+
+
 validators.validators['type:connection_limit'] = _validate_connection_limit
+validators.validators['type:keepalive_timeout_range'] = _validate_keepalive_timeout_range
 validators.validators['type:conf_bw'] = _validate_bw_conf_and_value
 validators.add_validator('type:az_list_or_none',
                          _validate_az_list_or_none)
@@ -378,7 +386,12 @@ RESOURCE_ATTRIBUTE_MAP = {
         'customized': {'allow_post': True, 'allow_put': True,
             'default': None,
             'validate': {'type:string_or_none': None},
-            'is_visible': True}
+            'is_visible': True},
+        'keepalive_timeout': {'allow_post': True, 'allow_put': True,
+                              'default': -1,
+                              'validate': {'type:keepalive_timeout_range': None},
+                              'convert_to': converters.convert_to_int,
+                              'is_visible': True}
     },
     'pools': {
         'id': {'allow_post': False, 'allow_put': False,
