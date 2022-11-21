@@ -62,7 +62,10 @@ class LbaasAgentSchedulerDbMixin(agentschedulers_db.AgentSchedulerDbMixin,
 
         if (binding and self.is_eligible_agent(
                 active, binding.agent)):
-            return {'agent': self._make_agent_dict(binding.agent)}
+            return {
+                'agent': self._make_agent_dict(binding.agent),
+                'device_id': binding.device_id
+            }
 
     def get_lbaas_agents(self, context, active=None, filters=None):
         query = context.session.query(agents_db.Agent)
