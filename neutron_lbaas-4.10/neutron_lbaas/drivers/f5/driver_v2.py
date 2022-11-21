@@ -46,7 +46,7 @@ class F5LBaaSV2Driver(driver_base.LoadBalancerBaseDriver):
         if not env:
             msg = "F5LBaaSV2Driver cannot be intialized because the "\
                 "environment is not defined. To set the environment, edit "\
-                "neutron_lbaas-BAK.conf and append the environment name to the "\
+                "neutron_lbaas.conf and append the environment name to the "\
                 "service_provider class name."
             LOG.debug(msg)
             raise UndefinedEnvironment(msg)

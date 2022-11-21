@@ -130,7 +130,6 @@ def upgrade():
         sa.Column(u'default_pool_id', sa.String(36), nullable=True),
         sa.Column(u'status', sa.String(16), nullable=False),
         sa.Column(u'admin_state_up', sa.Boolean(), nullable=False),
-        sa.Column(u'keepalive_timeout', sa.Integer, nullable=True),
         sa.ForeignKeyConstraint([u'loadbalancer_id'],
                                 [u'lbaas_loadbalancers.id']),
         sa.ForeignKeyConstraint([u'default_pool_id'],

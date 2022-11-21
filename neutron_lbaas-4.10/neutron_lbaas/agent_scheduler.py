@@ -43,9 +43,6 @@ class LoadbalancerAgentBinding(model_base.BASEV2):
         sa.String(36),
         sa.ForeignKey("agents.id", ondelete='CASCADE'),
         nullable=False)
-    device_id = sa.Column(
-        sa.String(36),
-        nullable=True)
 
 
 class LbaasAgentSchedulerDbMixin(agentschedulers_db.AgentSchedulerDbMixin,

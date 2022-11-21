@@ -39,7 +39,7 @@ DEVICE_DRIVERS = 'device_drivers'
 OPTS = [
     cfg.MultiStrOpt(
         'device_driver',
-        default=['neutron_lbaas-BAK.drivers.haproxy.'
+        default=['neutron_lbaas.drivers.haproxy.'
                  'namespace_driver.HaproxyNSDriver'],
         help=_('Drivers used to manage loadbalancing devices'),
     ),
