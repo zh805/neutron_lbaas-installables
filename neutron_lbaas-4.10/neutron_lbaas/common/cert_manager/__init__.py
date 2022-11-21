@@ -38,6 +38,6 @@ def get_backend():
     global _CERT_MANAGER_PLUGIN
     if not _CERT_MANAGER_PLUGIN:
         _CERT_MANAGER_PLUGIN = driver.DriverManager(
-            "neutron_lbaas-BAK.cert_manager.backend",
+            "neutron_lbaas.cert_manager.backend",
             cfg.CONF.certificates.cert_manager_type).driver
     return _CERT_MANAGER_PLUGIN

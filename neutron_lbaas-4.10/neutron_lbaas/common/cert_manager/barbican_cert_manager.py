@@ -63,7 +63,7 @@ class CertManager(cert_manager.CertManager):
     def __init__(self):
         super(CertManager, self).__init__()
         self.auth = stevedore_driver.DriverManager(
-            namespace='neutron_lbaas-BAK.cert_manager.barbican_auth',
+            namespace='neutron_lbaas.cert_manager.barbican_auth',
             name=cfg.CONF.certificates.barbican_auth,
             invoke_on_load=True,
         ).driver

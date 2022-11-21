@@ -35,7 +35,7 @@ LB_SCHEDULERS = 'loadbalancer_schedulers'
 
 AGENT_SCHEDULER_OPTS = [
     cfg.StrOpt('loadbalancer_scheduler_driver',
-               default='neutron_lbaas-BAK.agent_scheduler.ChanceScheduler',
+               default='neutron_lbaas.agent_scheduler.ChanceScheduler',
                help=_('Driver to use for scheduling '
                       'to a default loadbalancer agent')),
     cfg.BoolOpt('allow_automatic_lbaas_agent_failover',

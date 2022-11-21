@@ -96,7 +96,7 @@ class BaseManagerMixin(object):
 
         :param context: neutron_lib context
         :param obj: instance of a
-                    neutron_lbaas-BAK.services.loadbalancer.data_model
+                    neutron_lbaas.services.loadbalancer.data_model
         :param delete: set True if being called from a delete method.  Will
                        most likely result in the obj being deleted from the db.
         :param lb_create: set True if this is being called after a successful
@@ -180,7 +180,7 @@ class BaseManagerMixin(object):
 
         :param context: neutron_lib context
         :param obj: instance of a
-                    neutron_lbaas-BAK.services.loadbalancer.data_model
+                    neutron_lbaas.services.loadbalancer.data_model
         """
         LOG.debug("Starting failed_completion method after a failed driver "
                   "action.")

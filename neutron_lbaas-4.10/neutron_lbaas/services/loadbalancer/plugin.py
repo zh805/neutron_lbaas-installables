@@ -62,7 +62,7 @@ IP_VERSION_MAP = {
 def add_provider_configuration(type_manager, service_type):
     type_manager.add_provider_configuration(
         service_type,
-        pconf.ProviderConfiguration('neutron_lbaas-BAK'))
+        pconf.ProviderConfiguration('neutron_lbaas'))
 
 
 class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,

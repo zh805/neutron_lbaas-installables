@@ -20,7 +20,7 @@ import abc
 from oslo_config import cfg
 import six
 
-cfg.CONF.import_group('service_auth', 'neutron_lbaas-BAK.common.keystone')
+cfg.CONF.import_group('service_auth', 'neutron_lbaas.common.keystone')
 
 
 @six.add_metaclass(abc.ABCMeta)
