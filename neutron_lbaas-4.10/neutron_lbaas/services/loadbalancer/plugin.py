@@ -1076,7 +1076,11 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             LOG.debug("Try to enable transparent")
             if protocol not in [lb_const.PROTOCOL_TCP,
                                 lb_const.PROTOCOL_FTP,
-                                lb_const.PROTOCOL_HTTPS]:
+                                lb_const.PROTOCOL_HTTPS,
+                                lb_const.PROTOCOL_HTTP,
+                                lb_const.PROTOCOL_TERMINATED_HTTPS,
+                                lb_const.PROTOCOL_UDP
+                                ]:
                 raise loadbalancerv2.EnableTransparentInvalid(
                     protocol=protocol)
 
