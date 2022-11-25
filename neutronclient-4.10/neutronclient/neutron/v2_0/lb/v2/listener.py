@@ -193,6 +193,10 @@ class CreateListener(neutronV20.CreateCommand):
             '--keepalive-timeout',
             dest='keepalive_timeout',
             help=_('Tcp Connect Timeout.'))
+        parser.add_argument(
+            '--proxy-protocol',
+            dest='proxy_protocol',
+            help=_('To enable/disable PROXY protocol'))
 
     def args2body(self, parsed_args):
         if not parsed_args.loadbalancer and not parsed_args.default_pool:
