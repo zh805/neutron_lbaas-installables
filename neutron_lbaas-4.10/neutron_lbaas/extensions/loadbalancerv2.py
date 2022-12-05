@@ -391,7 +391,11 @@ RESOURCE_ATTRIBUTE_MAP = {
                               'default': -1,
                               'validate': {'type:keepalive_timeout_range': None},
                               'convert_to': converters.convert_to_int,
-                              'is_visible': True}
+                              'is_visible': True},
+        'proxy_protocol': {'allow_post': True, 'allow_put': True,
+                           'default': False,
+                           'convert_to': converters.convert_to_boolean,
+                           'is_visible': True},
     },
     'pools': {
         'id': {'allow_post': False, 'allow_put': False,

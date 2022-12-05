@@ -659,7 +659,7 @@ class Listener(BaseDataModel):
               'mutual_authentication_up', 'ca_container_id',
               'redirect_up', 'redirect_protocol', 'redirect_port', 'http2',
               'tls_protocols', 'cipher_suites',
-              'customized', 'keepalive_timeout']
+              'customized', 'keepalive_timeout', 'proxy_protocol']
 
     def __init__(self, id=None, tenant_id=None, name=None, description=None,
                  default_pool_id=None, loadbalancer_id=None, protocol=None,
@@ -671,7 +671,7 @@ class Listener(BaseDataModel):
                  ca_container_id=None, redirect_up=None, redirect_protocol=None,
                  redirect_port=None, http2=None,
                  tls_protocols=None, cipher_suites=None,
-                 customized=None, keepalive_timeout=None):
+                 customized=None, keepalive_timeout=None, proxy_protocol=None):
         self.id = id
         self.tenant_id = tenant_id
         self.name = name
@@ -700,6 +700,7 @@ class Listener(BaseDataModel):
         self.cipher_suites = cipher_suites
         self.customized = customized
         self.keepalive_timeout = keepalive_timeout
+        self.proxy_protocol = proxy_protocol
 
     def attached_to_loadbalancer(self):
         return bool(self.loadbalancer)

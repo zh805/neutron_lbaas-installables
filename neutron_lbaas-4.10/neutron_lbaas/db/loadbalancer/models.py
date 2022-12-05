@@ -592,6 +592,7 @@ class Listener(model_base.BASEV2, model_base.HasId, model_base.HasProject):
     tls_protocols = sa.Column(sa.String(128), default=None, nullable=True)
     cipher_suites = sa.Column(sa.String(1024), default=None, nullable=True)
     keepalive_timeout = sa.Column(sa.Integer, nullable=True)
+    proxy_protocol = sa.Column(sa.Boolean(), nullable=True)
 
     @property
     def root_loadbalancer(self):
