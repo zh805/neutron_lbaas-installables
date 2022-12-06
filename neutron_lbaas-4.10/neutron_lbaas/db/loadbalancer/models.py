@@ -615,7 +615,7 @@ class Listener(model_base.BASEV2, model_base.HasId, model_base.HasProject):
             'protocol', 'default_tls_container_id', 'protocol_port',
             'connection_limit', 'admin_state_up', 'transparent',
             'mutual_authentication_up', 'ca_container_id','tls_protocols', 'cipher_suites',
-            'customized'])
+            'customized', 'keepalive_timeout', 'proxy_protocol'])
 
         # NOTE(blogan): Returning a list to future proof for M:N objects
         # that are not yet implemented.
