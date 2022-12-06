@@ -222,7 +222,7 @@ class CreateListener(neutronV20.CreateCommand):
                                 'ca_container_id', 'redirect_protocol',
                                 'redirect_port', 'http2',
                                 'tls_protocols', 'cipher_suites',
-                                'keepalive_timeout'])
+                                'keepalive_timeout', 'proxy_protocol'])
         _parse_common_args(body, parsed_args, self.get_client())
         return {self.resource: body}
 
@@ -324,6 +324,10 @@ class UpdateListener(neutronV20.UpdateCommand):
             '--keepalive-timeout',
             dest='keepalive_timeout',
             help=_('Tcp Connect Timeout.'))
+        parser.add_argument(
+            '--proxy-protocol',
+            dest='proxy_protocol',
+            help=_('To enable/disable PROXY protocol'))
 
     def args2body(self, parsed_args):
         body = {}
@@ -334,7 +338,7 @@ class UpdateListener(neutronV20.UpdateCommand):
                                 'redirect_up', 'redirect_protocol',
                                 'redirect_port', 'sni_container_refs',
                                 'http2', 'tls_protocols', 'cipher_suites',
-                                'keepalive_timeout'])
+                                'keepalive_timeout', 'proxy_protocol'])
         _parse_common_args(body, parsed_args, self.get_client())
         return {self.resource: body}
 
