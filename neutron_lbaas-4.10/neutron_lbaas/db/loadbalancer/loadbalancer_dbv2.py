@@ -441,6 +441,15 @@ class LoadBalancerPluginDbv2(base_db.CommonDbMixin,
         return data_models.ACLGroupListenerBinding. \
             from_sqlalchemy_model(acl_group_listener_binding_db)
 
+    def get_acl_binding_info_by_acl_group_id(
+            self, context, acl_group_id):
+
+        filters = {'acl_group_id': [acl_group_id]}
+        acl_group_listener_binding_dbs = self._get_resources(context, models.ACLGroupListenerBinding,
+                                     filters=filters)
+        return [data_models.ACLGroupListenerBinding.from_sqlalchemy_model(acl_group_listener_binding_db).to_api_dict()
+                for acl_group_listener_binding_db in acl_group_listener_binding_dbs]
+
     def get_acl_listener_binding_by_listener_id(
             self, context, listener_id):
         acl_group_listener_binding_db = None
