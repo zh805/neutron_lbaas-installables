@@ -189,7 +189,14 @@ class CreateListener(neutronV20.CreateCommand):
                    'If TLS protocol is "DEFAULT", the cipher suites must be "DEFAULT". '
                    'If not specify TLS protocol and cipher suites, please do not set the parameters '
                    'tls_protocols and cipher_suites.'))
-
+        parser.add_argument(
+            '--keepalive-timeout',
+            dest='keepalive_timeout',
+            help=_('Tcp Connect Timeout.'))
+        parser.add_argument(
+            '--proxy-protocol',
+            dest='proxy_protocol',
+            help=_('To enable/disable PROXY protocol'))
 
     def args2body(self, parsed_args):
         if not parsed_args.loadbalancer and not parsed_args.default_pool:
@@ -214,7 +221,8 @@ class CreateListener(neutronV20.CreateCommand):
                                 'sni_container_refs', 'tenant_id',
                                 'ca_container_id', 'redirect_protocol',
                                 'redirect_port', 'http2',
-                                'tls_protocols', 'cipher_suites'])
+                                'tls_protocols', 'cipher_suites',
+                                'keepalive_timeout', 'proxy_protocol'])
         _parse_common_args(body, parsed_args, self.get_client())
         return {self.resource: body}
 
@@ -312,7 +320,14 @@ class UpdateListener(neutronV20.UpdateCommand):
                    'If TLS protocol is "DEFAULT", the cipher suites must be "DEFAULT". '
                    'If not specify TLS protocol and cipher suites, please do not set the parameters '
                    'tls_protocols and cipher_suites.'))
-
+        parser.add_argument(
+            '--keepalive-timeout',
+            dest='keepalive_timeout',
+            help=_('Tcp Connect Timeout.'))
+        parser.add_argument(
+            '--proxy-protocol',
+            dest='proxy_protocol',
+            help=_('To enable/disable PROXY protocol'))
 
     def args2body(self, parsed_args):
         body = {}
@@ -322,7 +337,8 @@ class UpdateListener(neutronV20.UpdateCommand):
                                 'mutual_authentication_up', 'ca_container_id',
                                 'redirect_up', 'redirect_protocol',
                                 'redirect_port', 'sni_container_refs',
-                                'http2', 'tls_protocols', 'cipher_suites'])
+                                'http2', 'tls_protocols', 'cipher_suites',
+                                'keepalive_timeout', 'proxy_protocol'])
         _parse_common_args(body, parsed_args, self.get_client())
         return {self.resource: body}
 
