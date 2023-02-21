@@ -359,6 +359,10 @@ class LoadBalancerPluginDbv2(base_db.CommonDbMixin,
         acl_group_db = self._get_resource(context, models.ACLGroup, id)
         return data_models.ACLGroup.from_sqlalchemy_model(acl_group_db)
 
+    def get_acl_group_as_api_dict(self, context, id):
+        acl_group_db = self._get_resource(context, models.ACLGroup, id)
+        return acl_group_db.to_api_dict
+
     def create_acl_group_acl_rule(self, context, acl_group_id, acl_rule):
         self._load_id(context, acl_rule)
         with context.session.begin(subtransactions=True):
@@ -389,6 +393,10 @@ class LoadBalancerPluginDbv2(base_db.CommonDbMixin,
     def get_acl_group_acl_rule(self, context, id):
         acl_rule_db = self._get_resource(context, models.ACLRule, id)
         return data_models.ACLRule.from_sqlalchemy_model(acl_rule_db)
+
+    def get_acl_group_acl_rule_as_api_dict(self, context, id):
+        acl_rule_db = self._get_resource(context, models.ACLRule, id)
+        return acl_rule_db.to_api_dict
 
     def add_listener(self, context, acl_group_id, binding_info):
         listener_id = binding_info.get('listener_id')
@@ -440,6 +448,15 @@ class LoadBalancerPluginDbv2(base_db.CommonDbMixin,
                     listener_id=listener_id, acl_group_id=acl_group_id)
         return data_models.ACLGroupListenerBinding. \
             from_sqlalchemy_model(acl_group_listener_binding_db)
+
+    def get_acl_binding_info_by_acl_group_id(
+            self, context, acl_group_id):
+
+        filters = {'acl_group_id': [acl_group_id]}
+        acl_group_listener_binding_dbs = self._get_resources(context, models.ACLGroupListenerBinding,
+                                     filters=filters)
+        return [data_models.ACLGroupListenerBinding.from_sqlalchemy_model(acl_group_listener_binding_db).to_api_dict()
+                for acl_group_listener_binding_db in acl_group_listener_binding_dbs]
 
     def get_acl_listener_binding_by_listener_id(
             self, context, listener_id):
