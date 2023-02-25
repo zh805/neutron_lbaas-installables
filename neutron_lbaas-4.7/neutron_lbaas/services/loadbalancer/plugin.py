@@ -1,4 +1,5 @@
 #
+# -*- coding: utf-8 -*-
 # Copyright 2013 Radware LTD.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -201,9 +202,12 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             raise loadbalancerv2.DriverError(msg=e)
 
     def _handle_driver_error(self, context, db_entity):
-        lb_id = db_entity.root_loadbalancer.id
-        self.db.update_status(context, models.LoadBalancer, lb_id,
-                              n_constants.ERROR)
+        try:
+            lb_id = db_entity.root_loadbalancer.id
+            self.db.update_status(context, models.LoadBalancer, lb_id,
+                                  n_constants.ERROR)
+        except Exception as e:
+            LOG.info('handle_driver_error %s', e)
 
     def _eliminate_flavor(self, loadbalancer_obj):
         try:
@@ -442,15 +446,15 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
     def _make_acl_group_with_rule_dict(self, context, acl_group_id):
         # Based on acl group info, construct acl group
         # dict with its acl rules
-        acl_group_dict_with_rules = self.get_acl_group(
+        acl_group_dict_with_rules = self.db.get_acl_group_as_api_dict(
             context, acl_group_id)
         # prevent other listeners info
         acl_group_dict_with_rules.pop("listeners")
         # replace acl rule id list with acl rule details list
         rule_id_list = acl_group_dict_with_rules.pop("acl_rules")
         if len(rule_id_list) > 0:
-            rule_detail_list = [self.db.get_acl_group_acl_rule(
-                context, rule_id['id']).to_api_dict()
+            rule_detail_list = [self.db.get_acl_group_acl_rule_as_api_dict(
+                context, rule_id['id'])
                                 for rule_id in rule_id_list]
             acl_group_dict_with_rules['acl_rules_detail'] = \
                 rule_detail_list
@@ -464,11 +468,52 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
 
         ag_with_rule = self._make_acl_group_with_rule_dict(
             context, acl_group_id)
-        driver = self._get_one_provider_driver()
 
-        self._call_driver_operation(
-            context, driver.acl_group.update,
-            ag_with_rule)
+        loadbalancers = self.get_acl_group_bind_loadbalancers(context, acl_group_id)
+        for driver in self.drivers.values():
+            self._call_driver_operation(
+                context, driver.acl_group.update,
+                ag_with_rule, loadbalancers=loadbalancers)
+
+    def get_acl_group_bind_loadbalancers(self, context, acl_group_id):
+        binding_infos = self.db.get_acl_binding_info_by_acl_group_id(context, acl_group_id)
+        loadbalancer_dict = {}
+        for binding_info in binding_infos:
+            listener_db = self.db.get_listener_as_api_dict(context, binding_info['listener_id'])
+            if listener_db['loadbalancers'][0]['id'] in loadbalancer_dict:
+                continue
+            loadbalancer = self.db.get_loadbalancer_as_api_dict(context, listener_db['loadbalancers'][0]['id'])
+            loadbalancer_dict[loadbalancer['id']] = loadbalancer
+        return loadbalancer_dict.values()
+
+    def _sync_acl_group_to_listener(
+            self, context, acl_group_id):
+        acl_group_db = self.get_acl_group(context, acl_group_id)
+        listeners = acl_group_db.get("listeners")
+        loadbalancers = []
+        # Acl group has been associated to listener(s),
+        # sync acl group change to each listener(s)
+        if listeners:
+            # Acl group with rule dict is general for each
+            # listeners, but acl group binding info is not.
+            ag_with_rule = self._make_acl_group_with_rule_dict(
+                context, acl_group_id)
+            for listener in listeners:
+                bi = self.db.get_acl_listener_binding_info(
+                    context, listener['id'],
+                    acl_group_id).to_api_dict()
+                bi_to_driver = self._make_acl_group_binding_info_dict(
+                    acl_group_with_rules_dict=ag_with_rule,
+                    binding_info_dict=bi)
+                lsn_dict = self.db.get_listener_as_api_dict(
+                    context, listener['id'])
+                driver = self._get_driver_for_loadbalancer(
+                    context,
+                    lsn_dict['loadbalancers'][0]['id'])
+                if lsn_dict['loadbalancers'][0]['id'] not in loadbalancers:
+                    loadbalancers.append(lsn_dict['loadbalancers'][0]['id'])
+                    self._call_driver_operation(
+                        context, driver.listener.config_acl, bi_to_driver)
 
     def _get_one_provider_driver(self):
         """We use default, if there is no default driver,
@@ -484,35 +529,16 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
         return driver
 
     def create_acl_group(self, context, acl_group):
-        """We use default_provider to locate driver, since
-           acl_group object has no efficient way to get its
-           provider_name and driver.
-        """
-
         acl_group_dict = acl_group.get('acl_group')
         try:
             acl_group_db = self.db.create_acl_group(
                 context, acl_group_dict)
-            acl_group_dict = acl_group_db.to_api_dict()
-
         except Exception:
             raise acl_ext.DBOperationFailed(
                 operation='create_acl_group')
 
-        try:
-            driver = self._get_one_provider_driver()
-            acl_group_dict = acl_group_db.to_api_dict()
-
-            self._call_driver_operation(
-                context, driver.acl_group.create,
-                acl_group_dict)
-        except Exception as ex:
-            mesg = "Create ACL group fail: %s " % str(
-                acl_group)
-            LOG.error(mesg)
-            raise ex
-
-        return acl_group_dict
+        return self.db.get_acl_group(
+            context, acl_group_db.id).to_api_dict()
 
     def delete_acl_group(self, context, id):
         self._check_acl_group_exists(context, id)
@@ -522,21 +548,9 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
                 acl_group_id=id)
         try:
             self.db.delete_acl_group(context, id)
-
-            driver = self._get_one_provider_driver()
         except Exception:
             raise acl_ext.DBOperationFailed(
                 operation='delete_acl_group')
-        try:
-            acl_group_dict = acl_group.to_api_dict()
-            self._call_driver_operation(
-                context, driver.acl_group.delete,
-                acl_group_dict)
-        except Exception as ex:
-            mesg = "Delete ACL group fail: %s " % str(
-                id)
-            LOG.error(mesg)
-            raise ex
 
     def _filter_resource_key(self, allow_keys, resource):
         return {k: resource[k] for k in allow_keys
@@ -582,43 +596,51 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
         self._validate_acl_rule_ip_version(
             ip_address=acl_rule_data.get('ip_address'),
             ip_version=acl_rule_data.get('ip_version'))
-        try:
-            acl_rule_db = self.db.create_acl_group_acl_rule(
-                context, acl_group_id=acl_group_id,
-                acl_rule=acl_rule_data)
-            acl_rule_dict = acl_rule_db.to_api_dict()
-        except Exception:
-            raise acl_ext.DBOperationFailed(
-                operation='create_acl_group_acl_rule')
+        with context.session.begin(subtransactions=True):
+            try:
+                acl_rule_db = self.db.create_acl_group_acl_rule(
+                    context, acl_group_id=acl_group_id,
+                    acl_rule=acl_rule_data)
+            except Exception:
+                raise acl_ext.DBOperationFailed(
+                    operation='create_acl_group_acl_rule')
 
-        try:
-            self._update_acl_group_rules(context, acl_group_id)
-        except Exception as ex:
-            mesg = "Create ACL rule %s of ACL group %s fail" % (
-                str(acl_rule), str(acl_group_id)
-            )
-            LOG.error(mesg)
-            raise ex
+            try:
+                for provider, driver in self.drivers.items():
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        self._update_acl_group_rules(context, acl_group_id)
+                    else:
+                        self._sync_acl_group_to_listener(context, acl_group_id)
+            except Exception as ex:
+                mesg = "Create ACL rule %s of ACL group %s fail" % (
+                    str(acl_rule), str(acl_group_id)
+                )
+                LOG.error(mesg)
+                raise ex
 
-        return acl_rule_dict
+        return acl_rule_db.to_api_dict()
 
     def delete_acl_group_acl_rule(self, context, id, acl_group_id):
         self._check_acl_group_exists(context, acl_group_id)
         self._check_acl_rule_exists(context, id)
-
-        try:
-            self.db.delete_acl_group_acl_rule(context, id)
-        except Exception:
-            raise acl_ext.DBOperationFailed(
-                operation='delete_acl_group_acl_rule')
-        try:
-            self._update_acl_group_rules(context, acl_group_id)
-        except Exception as ex:
-            mesg = "Delete ACL rule %s of ACL group %s fail" % (
-                str(id), str(acl_group_id)
-            )
-            LOG.error(mesg)
-            raise ex
+        with context.session.begin(subtransactions=True):
+            try:
+                self.db.delete_acl_group_acl_rule(context, id)
+            except Exception:
+                raise acl_ext.DBOperationFailed(
+                    operation='delete_acl_group_acl_rule')
+            try:
+                for provider, driver in self.drivers.items():
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        self._update_acl_group_rules(context, acl_group_id)
+                    else:
+                        self._sync_acl_group_to_listener(context, acl_group_id)
+            except Exception as ex:
+                mesg = "Delete ACL rule %s of ACL group %s fail" % (
+                    str(id), str(acl_group_id)
+                )
+                LOG.error(mesg)
+                raise ex
 
     def update_acl_group_acl_rule(self, context, id, acl_group_id, acl_rule):
         """Acl_rule should not contain id, or it will be update ?"""
@@ -637,24 +659,28 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             self._validate_acl_rule_ip_version(
                 ip_address=acl_rule_dict.get('ip_address'),
                 ip_version=current_ip_version)
-        try:
-            updated_rule = self.db.update_acl_group_acl_rule(
-                context, id, acl_rule=acl_rule_dict)
-            updated_rule_dict = updated_rule.to_api_dict()
-        except Exception:
-            raise acl_ext.DBOperationFailed(
-                operation='update_acl_group_acl_rule')
+        with context.session.begin(subtransactions=True):
+            try:
+                updated_rule = self.db.update_acl_group_acl_rule(
+                    context, id, acl_rule=acl_rule_dict)
+            except Exception:
+                raise acl_ext.DBOperationFailed(
+                    operation='update_acl_group_acl_rule')
 
-        try:
-            self._update_acl_group_rules(context, acl_group_id)
-        except Exception as ex:
-            mesg = "Update ACL rule %s of ACL group %s fail" % (
-                str(id), str(acl_group_id)
-            )
-            LOG.error(mesg)
-            raise ex
+            try:
+                for provider, driver in self.drivers.items():
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        self._update_acl_group_rules(context, acl_group_id)
+                    else:
+                        self._sync_acl_group_to_listener(context, acl_group_id)
+            except Exception as ex:
+                msg = "Update ACL rule %s of ACL group %s fail" % (
+                    str(id), str(acl_group_id)
+                )
+                LOG.error(msg)
+                raise ex
 
-        return updated_rule_dict
+        return updated_rule.to_api_dict()
 
     def get_acl_group_acl_rules(
             self, context, acl_group_id, filters=None, fields=None):
@@ -679,18 +705,23 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
     def flush_acl_rules(self, context, acl_group_id):
         self._check_acl_group_exists(context, acl_group_id)
         rule_dbs = self.get_acl_group_acl_rules(context, acl_group_id)
-        try:
-            for rule_db in rule_dbs:
-                self.db.delete_acl_group_acl_rule(
-                    context, rule_db['id'])
-        except Exception:
-            raise acl_ext.DBOperationFailed(
-                operation='flush_acl_group_acl_rules')
+        with context.session.begin(subtransactions=True):
+            try:
+                for rule_db in rule_dbs:
+                    self.db.delete_acl_group_acl_rule(
+                        context, rule_db['id'])
+            except Exception:
+                raise acl_ext.DBOperationFailed(
+                    operation='flush_acl_group_acl_rules')
 
-        try:
-            self._update_acl_group_rules(context, acl_group_id)
-        except Exception as ex:
-            raise ex
+            try:
+                for provider, driver in self.drivers.items():
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        self._update_acl_group_rules(context, acl_group_id)
+                    else:
+                        self._sync_acl_group_to_listener(context, acl_group_id)
+            except Exception as ex:
+                raise ex
 
         return self.get_acl_group(context, acl_group_id)
 
@@ -701,7 +732,8 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             raise acl_ext.MissingOrInvalidBindingInfo(
                 info_type='listener_id')
         try:
-            listener_db_obj = self.db.get_listener(context, listener_id)
+            listener_db_dict = self.db.get_listener_as_api_dict(
+                context, listener_id)
         except loadbalancerv2.EntityNotFound as notfound:
             raise notfound
         binding_type = binding_info.get('type')
@@ -712,27 +744,48 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
         enabled = binding_info.get('enabled', True)
         enabled = strutils.bool_from_string(enabled)
         binding_info.update({'enabled': enabled})
-        try:
-            bind_db_obj = self.db.add_listener(
-                context, acl_group_id=acl_group_id,
-                binding_info=binding_info)
-        except acl_ext.DuplicateBindListenerWithACL as duplicate:
-            raise duplicate
-        except Exception:
-            raise acl_ext.DBOperationFailed(
-                operation='add_listener')
+        with context.session.begin(subtransactions=True):
+            try:
+                bind_db_obj = self.db.add_listener(
+                    context, acl_group_id=acl_group_id,
+                    binding_info=binding_info)
+            except acl_ext.DuplicateBindListenerWithACL as duplicate:
+                raise duplicate
+            except Exception:
+                raise acl_ext.DBOperationFailed(
+                    operation='add_listener')
 
-        # we still use the origin driver fetcher.
-        # since listener may not everywhere
-        driver = self._get_driver_for_loadbalancer(
-            context, listener_db_obj.loadbalancer_id)
+            driver_target = self._get_driver_for_loadbalancer(
+                context, listener_db_dict['loadbalancers'][0]['id'])
 
-        # be caution
-        # this _call_driver_operation is upsidedown weired,
-        self._call_driver_operation(
-            context, driver.listener.update_acl_bind,
-            bind_db_obj, listener_db_obj
-        )
+            for provider, driver in self.drivers.items():
+                if driver_target == driver:
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        listener_db_obj = self.db.get_listener_as_api_dict(
+                            context, listener_id
+                        )
+
+                        acl_bind = copy.deepcopy(binding_info)
+                        acl_bind['acl_group_id'] = acl_group_id
+
+                        ag_with_rule = self._make_acl_group_with_rule_dict(
+                            context, acl_group_id)
+
+                        loadbalancer=self.db.get_loadbalancer_as_api_dict(context, listener_db_dict['loadbalancers'][0]['id'])
+                        self._call_driver_operation(
+                            context, driver.acl_group.add_acl_bind, acl_bind,
+                            listener=listener_db_obj, loadbalancer=loadbalancer,
+                            acl_group=ag_with_rule)
+                    else:
+                        ag_with_rule = self._make_acl_group_with_rule_dict(
+                            context, acl_group_id)
+                        bi_to_driver = self._make_acl_group_binding_info_dict(
+                            acl_group_with_rules_dict=ag_with_rule,
+                            binding_info_dict=bind_db_obj.to_api_dict())
+                        self._call_driver_operation(
+                            context, driver.listener.config_acl, bi_to_driver)
+                    break
+
         return bind_db_obj.to_api_dict()
 
     def remove_listener(self, context, acl_group_id, binding_info):
@@ -742,28 +795,56 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             raise acl_ext.MissingOrInvalidBindingInfo(
                 info_type='listener_id')
         try:
-            listener_db_obj = self.db.get_listener(context, listener_id)
+            listener_db_dict = self.db.get_listener_as_api_dict(
+                context, listener_id)
         except loadbalancerv2.EntityNotFound as notfound:
             raise notfound
-        try:
-            bind_db_obj = self.db.remove_listener(
-                context, listener_id=listener_id,
-                acl_group_id=acl_group_id)
+        with context.session.begin(subtransactions=True):
+            try:
+                bind_db_obj = self.db.remove_listener(
+                    context, listener_id=listener_id,
+                    acl_group_id=acl_group_id)
 
-            # we update he  enable attribute to remove acl bind
-            bind_db_obj.enabled = False
-        except acl_ext.NonexistentRelationShip as nonexistent:
-            raise nonexistent
-        except Exception:
-            raise acl_ext.DBOperationFailed(
-                operation='remove_listener')
-        driver = self._get_driver_for_loadbalancer(
-            context, listener_db_obj.loadbalancer_id)
+                # we update he  enable attribute to remove acl bind
+                bind_db_obj.enabled = False
+            except acl_ext.NonexistentRelationShip as nonexistent:
+                raise nonexistent
+            except Exception:
+                raise acl_ext.DBOperationFailed(
+                    operation='remove_listener')
+            driver_target = self._get_driver_for_loadbalancer(
+                context, listener_db_dict['loadbalancers'][0]['id'])
 
-        self._call_driver_operation(
-            context, driver.listener.update_acl_bind,
-            bind_db_obj, listener_db_obj
-        )
+            for provider, driver in self.drivers.items():
+                if driver_target == driver:
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        listener_db_obj = self.db.get_listener_as_api_dict(
+                            context, listener_id
+                        )
+                        acl_bind = copy.deepcopy(binding_info)
+                        acl_bind['acl_group_id'] = acl_group_id
+
+                        ag_with_rule = self._make_acl_group_with_rule_dict(
+                            context, acl_group_id)
+
+                        loadbalancer=self.db.get_loadbalancer_as_api_dict(context, listener_db_dict['loadbalancers'][0]['id'])
+
+                        self._call_driver_operation(
+                            context, driver.acl_group.remove_acl_bind, acl_bind,
+                            listener=listener_db_dict, loadbalancer=loadbalancer,
+                            acl_group=ag_with_rule
+                        )
+
+                    else:
+                        ag_with_rule = self._make_acl_group_with_rule_dict(
+                            context, acl_group_id)
+                        bi_to_driver = self._make_acl_group_binding_info_dict(
+                            acl_group_with_rules_dict=ag_with_rule,
+                            binding_info_dict=bind_db_obj.to_api_dict())
+                        self._call_driver_operation(
+                            context, driver.listener.remove_acl, bi_to_driver)
+                    break
+
         return bind_db_obj.to_api_dict()
 
     def create_loadbalancer(self, context, loadbalancer):
@@ -1196,36 +1277,45 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
         old_listener = self.db.get_listener(context, id)
         if old_listener.l7_policies:
             raise loadbalancerv2.EntityInUse(
-                entity_using=models.Listener.NAME,
+                entity_using=models.L7Policy.NAME,
                 id=old_listener.l7_policies[0].id,
-                entity_in_use=models.L7Policy.NAME)
+                entity_in_use=models.Listener.NAME)
+        with context.session.begin(subtransactions=True):
+            self.db.test_and_set_status(context, models.Listener, id,
+                                        n_constants.PENDING_DELETE)
+            listener_db = self.db.get_listener(context, id)
 
-        self.db.test_and_set_status(context, models.Listener, id,
-                                    n_constants.PENDING_DELETE)
-        listener_db = self.db.get_listener(context, id)
+            driver_target = self._get_driver_for_loadbalancer(
+                context, listener_db.loadbalancer_id)
 
-        driver = self._get_driver_for_loadbalancer(
-            context, listener_db.loadbalancer_id)
+            for provider, driver in self.drivers.items():
+                if driver_target == driver:
+                    if provider.lower() != lb_const.PROVIDER_ESLB:
+                        acl_bind_db = self.db.get_acl_listener_binding_by_listener_id(
+                            context, listener_id=id
+                        )
 
-        acl_bind_db = self.db.get_acl_listener_binding_by_listener_id(
-            context, listener_id=id
-        )
+                        if acl_bind_db:
+                            acl_bind_db.enabled = False
+                            acl_group_id = acl_bind_db.acl_group_id
 
-        if acl_bind_db:
-            acl_bind_db.enabled = False
-            acl_group_id = acl_bind_db.acl_group_id
+                            self.db.remove_listener(
+                                context, listener_id=id,
+                                acl_group_id=acl_group_id)
 
-            self.db.remove_listener(
-                context, listener_id=id,
-                acl_group_id=acl_group_id)
+                            ag_with_rule = self._make_acl_group_with_rule_dict(
+                                context, acl_group_id)
 
-            self._call_driver_operation(
-                context, driver.listener.update_acl_bind,
-                acl_bind_db, listener_db
-            )
+                            loadbalancer = self.db.get_loadbalancer_as_api_dict(context, old_listener.loadbalancer_id)
+                            self._call_driver_operation(
+                                context, driver.acl_group.remove_acl_bind, acl_bind_db.to_api_dict(),
+                                listener=old_listener.to_api_dict(), loadbalancer=loadbalancer,
+                                acl_group=ag_with_rule
+                            )
 
-        self._call_driver_operation(
-            context, driver.listener.delete, listener_db)
+                    self._call_driver_operation(
+                        context, driver.listener.delete, listener_db)
+                    break
 
     def get_listener(self, context, id, fields=None):
         return self.db.get_listener_as_api_dict(context, id)

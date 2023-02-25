@@ -41,13 +41,13 @@ class F5LBaaSV2Driver(driver_base.LoadBalancerBaseDriver):
         self.l7policy = L7PolicyManager(self)
         self.l7rule = L7RuleManager(self)
         self.acl_group = ACLGroupManager(self)
-        self.acl_bind = ACLBindManager(self)
+        # self.acl_bind = ACLBindManager(self)
 
         if not env:
-            msg = "F5LBaaSV2Driver cannot be intialized because the "\
-                "environment is not defined. To set the environment, edit "\
-                "neutron_lbaas.conf and append the environment name to the "\
-                "service_provider class name."
+            msg = "F5LBaaSV2Driver cannot be intialized because the " \
+                  "environment is not defined. To set the environment, edit " \
+                  "neutron_lbaas.conf and append the environment name to the " \
+                  "service_provider class name."
             LOG.debug(msg)
             raise UndefinedEnvironment(msg)
 
@@ -143,7 +143,7 @@ class HealthMonitorManager(driver_base.BaseHealthMonitorManager):
 
     def update(self, context, old_health_monitor, health_monitor):
         self.driver.f5.healthmonitor.update(context, old_health_monitor,
-                                   health_monitor)
+                                            health_monitor)
 
     def delete(self, context, health_monitor):
         self.driver.f5.healthmonitor.delete(context, health_monitor)
@@ -173,30 +173,43 @@ class L7RuleManager(driver_base.BaseL7RuleManager):
         self.driver.f5.l7rule.delete(context, l7rule)
 
 
+# class ACLGroupManager(driver_base.BaseACLGroupManager):
+#
+#     def create(self, context, acl_group):
+#         self.driver.f5.acl_group.create(context, acl_group)
+#
+#     def update(self, context, acl_group):
+#         self.driver.f5.acl_group.update(context,
+#                                         acl_group)
+#
+#     def delete(self, context, acl_group):
+#         self.driver.f5.acl_group.delete(context,
+#                                         acl_group)
+
+
 class ACLGroupManager(driver_base.BaseACLGroupManager):
-
     def create(self, context, acl_group):
-        self.driver.f5.acl_group.create(context, acl_group)
-
-    def update(self, context, acl_group):
-        self.driver.f5.acl_group.update(context,
-                                        acl_group)
+        pass
 
     def delete(self, context, acl_group):
-        self.driver.f5.acl_group.delete(context,
-                                        acl_group)
+        pass
 
+    def add_acl_bind(self, context, acl_bind, listener,
+                     loadbalancer, acl_group):
+        self.driver.f5.acl_group.add_acl_bind(
+            context, acl_bind, loadbalancer, listener,
+            acl_group
+        )
 
-class ACLBindManager(driver_base.BaseACLBindManager):
+    def remove_acl_bind(self, context, acl_bind,
+                        listener, loadbalancer,
+                        acl_group):
+        self.driver.f5.acl_group.remove_acl_bind(
+            context, acl_bind, loadbalancer,
+            listener, acl_group
+        )
 
-    def create(self, context, acl_bind):
-        self.driver.f5.acl_bind.create(context, acl_bind)
-
-    def update(self, context, old_acl_bind, acl_bind):
-        self.driver.f5.acl_bind.delete(context,
-                                       old_acl_bind,
-                                       acl_bind)
-
-    def delete(self, context, acl_bind):
-        self.driver.f5.acl_bind.delete(context,
-                                       acl_bind)
+    def update(self, context, acl_group, loadbalancers):
+        self.driver.f5.acl_group.update_acl_group(
+            context, acl_group, loadbalancers
+        )

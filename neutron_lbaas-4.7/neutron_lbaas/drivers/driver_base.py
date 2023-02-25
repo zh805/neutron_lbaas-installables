@@ -173,21 +173,22 @@ class BaseL7RuleManager(driver_mixins.BaseManagerMixin):
 
 
 class BaseACLGroupManager(driver_mixins.BaseManagerMixin):
-    model_class = models.ACLGroup
+    # model_class = models.ACLGroup
+    model_class = None
 
     @property
     def db_delete_method(self):
-        return self.driver.plugin.db.delete_acl_group
-
-
-class BaseACLBindManager(driver_mixins.BaseManagerMixin):
-    model_class = models.ACLGroupListenerBinding
-
-    @property
-    def db_delete_method(self):
-        # not need to implement it, since it will never
-        # be called
         pass
+
+
+# class BaseACLBindManager(driver_mixins.BaseManagerMixin):
+#     model_class = models.ACLGroupListenerBinding
+#
+#     @property
+#     def db_delete_method(self):
+#         # not need to implement it, since it will never
+#         # be called
+#         pass
 
 
 # A decorator for wrapping driver operations, which will automatically
