@@ -29,7 +29,6 @@ from neutron_lbaas.services.loadbalancer import constants as lb_const
 
 
 class ACLRule(model_base.BASEV2, model_base.HasId, model_base.HasProject):
-
     NAME = 'lbaas_acl_rule'
 
     __tablename__ = "lbaas_acl_rules"
@@ -43,6 +42,23 @@ class ACLRule(model_base.BASEV2, model_base.HasId, model_base.HasProject):
                              sa.ForeignKey(
                                  "lbaas_acl_groups.id"),
                              nullable=False)
+
+    @property
+    def to_api_dict(self):
+        def to_dict(sa_model, attributes):
+            ret = {}
+            for attr in attributes:
+                value = getattr(sa_model, attr)
+                if six.PY2 and isinstance(value, six.text_type):
+                    ret[attr.encode('utf8')] = value.encode('utf8')
+                else:
+                    ret[attr] = value
+            return ret
+
+        ret_dict = to_dict(self, [
+            'project_id', 'id', 'ip_address', 'description', 'ip_version', 'acl_group_id'])
+
+        return ret_dict
 
 
 class ACLGroupListenerBinding(model_base.BASEV2):
@@ -64,7 +80,6 @@ class ACLGroupListenerBinding(model_base.BASEV2):
 
 
 class ACLGroup(model_base.BASEV2, model_base.HasId, model_base.HasProject):
-
     NAME = 'lbaas_acl_group'
 
     __tablename__ = "lbaas_acl_groups"
@@ -76,11 +91,36 @@ class ACLGroup(model_base.BASEV2, model_base.HasId, model_base.HasProject):
     acl_rules = orm.relationship(ACLRule, uselist=True,
                                  backref=orm.backref(
                                      "acl_group", uselist=False),
-                                 cascade="all, delete-orphan")
+                                 cascade="all, delete-orphan",
+                                 lazy='joined')
 
     listeners = orm.relationship(
         ACLGroupListenerBinding, uselist=True,
-        backref=orm.backref("acl_group", uselist=False))
+        backref=orm.backref("acl_group", uselist=False),
+        lazy='joined')
+
+    @property
+    def to_api_dict(self):
+        def to_dict(sa_model, attributes):
+            ret = {}
+            for attr in attributes:
+                value = getattr(sa_model, attr)
+                if six.PY2 and isinstance(value, six.text_type):
+                    ret[attr.encode('utf8')] = value.encode('utf8')
+                else:
+                    ret[attr] = value
+            return ret
+
+        ret_dict = to_dict(self, [
+            'project_id', 'tenant_id', 'name', 'description', 'region'])
+
+        if self.listeners:
+            ret_dict['listeners'] = [{'id': listener.listener_id}
+                                     for listener in self.listeners]
+        if self.acl_rules:
+            ret_dict['acl_rules'] = [{'id': acl_rule.id}
+                                     for acl_rule in self.acl_rules]
+        return ret_dict
 
 
 class SessionPersistenceV2(model_base.BASEV2):
