@@ -104,9 +104,6 @@ class Port(standard_attr.HasStandardAttributes, model_base.BASEV2,
         sa.Index(
             'ix_ports_network_id_device_owner', 'network_id', 'device_owner'),
         sa.Index('ix_ports_device_id', 'device_id'),
-        sa.UniqueConstraint(
-            network_id, mac_address,
-            name='uniq_ports0network_id0mac_address'),
         model_base.BASEV2.__table_args__
     )
     api_collections = [port_def.COLLECTION_NAME]

@@ -1232,25 +1232,13 @@ class NeutronDbPluginV2(db_base_plugin_common.DbBasePluginCommon,
                 raise n_exc.SubnetPoolDeleteError(reason=reason)
             subnetpool.delete()
 
-    def _check_mac_addr_update(self, context, port, new_mac, device_owner):
-        if (device_owner and
-            device_owner.startswith(constants.DEVICE_OWNER_NETWORK_PREFIX)):
-            raise n_exc.UnsupportedPortDeviceOwner(
-                op=_("mac address update"), port_id=id,
-                device_owner=device_owner)
-
     @db_api.retry_if_session_inactive()
     def create_port_bulk(self, context, ports):
         return self._create_bulk('port', context, ports)
 
     def _create_db_port_obj(self, context, port_data):
         mac_address = port_data.pop('mac_address', None)
-        if mac_address:
-            if self._is_mac_in_use(context, port_data['network_id'],
-                                   mac_address):
-                raise exc.MacAddressInUse(net_id=port_data['network_id'],
-                                          mac=mac_address)
-        else:
+        if not mac_address:
             mac_address = self._generate_mac()
         db_port = models_v2.Port(mac_address=mac_address, **port_data)
         context.session.add(db_port)
@@ -1313,10 +1301,6 @@ class NeutronDbPluginV2(db_base_plugin_common.DbBasePluginCommon,
             self._enforce_device_owner_not_router_intf_or_device_id(
                 context, current_owner, current_device_id,
                 db_port['tenant_id'])
-
-        if new_mac and new_mac != db_port['mac_address']:
-            self._check_mac_addr_update(context, db_port,
-                                        new_mac, current_owner)
 
     @db_api.retry_if_session_inactive()
     def update_port(self, context, id, port):

@@ -45,8 +45,6 @@ def upgrade():
         sa.Column('device_id', sa.String(length=255), nullable=False),
         sa.Column('device_owner', sa.String(length=255), nullable=False),
         sa.ForeignKeyConstraint(['network_id'], ['networks.id']),
-        sa.UniqueConstraint('network_id', 'mac_address',
-                            name='uniq_ports0network_id0mac_address'),
         sa.PrimaryKeyConstraint('id'),
         sa.Index(op.f('ix_ports_network_id_device_owner'), 'network_id',
                  'device_owner'),
