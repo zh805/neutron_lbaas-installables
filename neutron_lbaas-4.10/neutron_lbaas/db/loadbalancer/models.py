@@ -668,3 +668,40 @@ class Listener(model_base.BASEV2, model_base.HasId, model_base.HasProject):
         ret_dict['l7policies'] = [{'id': l7_policy.id}
             for l7_policy in self.l7_policies]
         return ret_dict
+
+
+class UserDeviceMap(model_base.BASEV2, model_base.HasId, model_base.HasProject):
+    """Represents user device map."""
+
+    NAME = 'lbaas_user_device_map'
+
+    __tablename__ = "lbaas_user_device_maps"
+
+    user_id = sa.Column(sa.String(db_const.PROJECT_ID_FIELD_SIZE), nullable=False)
+    node_ip = sa.Column(sa.String(255), nullable=False)
+    provider = sa.Column(sa.String(255), nullable=False)
+    availability_zone_hints = sa.Column(sa.String(255), nullable=True)
+
+    @property
+    def to_api_dict(self):
+        def to_dict(sa_model, attributes):
+            ret = {}
+            for attr in attributes:
+                value = getattr(sa_model, attr)
+                if six.PY2 and isinstance(value, six.text_type):
+                    ret[attr.encode('utf8')] = value.encode('utf8')
+                else:
+                    ret[attr] = value
+            return ret
+
+        ret_dict = to_dict(self, [
+            'id', 'tenant_id', 'user_id', 'node_ip',
+            'provider', 'availability_zone_hints'])
+
+        if self.availability_zone_hints:
+            ret_dict['availability_zone_hints'] = \
+                az_ext.convert_az_string_to_list(self.availability_zone_hints)
+        else:
+            ret_dict['availability_zone_hints'] = []
+
+        return ret_dict

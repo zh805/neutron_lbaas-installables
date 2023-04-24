@@ -43,6 +43,7 @@ from neutron_lbaas.extensions import l7
 from neutron_lbaas.extensions import lb_network_vip
 from neutron_lbaas.extensions import loadbalancerv2
 from neutron_lbaas.extensions import sharedpools
+from neutron_lbaas.extensions import lb_user_device_map
 from neutron_lbaas.services.loadbalancer import constants as lb_const
 from neutron_lbaas.services.loadbalancer import data_models
 
@@ -1220,6 +1221,35 @@ class LoadBalancerPluginDbv2(base_db.CommonDbMixin,
                                        filters=filters, options=options)
         return [rule_db.to_api_dict
                 for rule_db in rule_dbs]
+
+    def create_user_device_map(self, context, user_device_map):
+        self._load_id(context, user_device_map)
+        map_db = models.UserDeviceMap(**user_device_map)
+        with context.session.begin(subtransactions=True):
+            context.session.add(map_db)
+            context.session.flush()
+        return data_models.UserDeviceMap.from_sqlalchemy_model(map_db)
+
+    def update_user_device_map(self, context, id, user_device_map):
+        with context.session.begin(subtransactions=True):
+            map_db = self._get_resource(context, models.UserDeviceMap, id)
+            map_db.update(user_device_map)
+        context.session.refresh(map_db)
+        return data_models.UserDeviceMap.from_sqlalchemy_model(map_db)
+
+    def delete_user_device_map(self, context, id):
+        with context.session.begin(subtransactions=True):
+            map_db = self._get_resource(context, models.UserDeviceMap, id)
+            context.session.delete(map_db)
+
+    def get_user_device_maps_as_api_dict(self, context, filters=None):
+        filters = filters or {}
+        map_dbs = self._get_resources(context, models.UserDeviceMap, filters=filters)
+        return [map_db.to_api_dict for map_db in map_dbs]
+
+    def get_user_device_map_as_api_dict(self, context, id):
+        map_db = self._get_resource(context, models.UserDeviceMap, id)
+        return map_db.to_api_dict
 
 
 def _prevent_lbaasv2_port_delete_callback(resource, event, trigger, **kwargs):

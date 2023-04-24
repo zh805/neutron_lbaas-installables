@@ -956,6 +956,34 @@ class ACLGroupListenerBinding(BaseDataModel):
         return super(ACLGroupListenerBinding, cls).from_dict(model_dict)
 
 
+class UserDeviceMap(BaseDataModel):
+    fields = ['id', 'tenant_id', 'user_id', 'node_ip',
+              'provider', 'availability_zone_hints']
+
+    def __init__(self, id=None, tenant_id=None, user_id=None, node_ip=None,
+                 provider=None, availability_zone_hints=None):
+        self.id = id
+        self.tenant_id = tenant_id
+        self.user_id = user_id
+        self.node_ip = node_ip
+        self.provider = provider
+        self.availability_zone_hints = availability_zone_hints
+
+    def to_api_dict(self):
+        ret_dict = super(UserDeviceMap, self).to_dict()
+        if self.availability_zone_hints:
+            ret_dict['availability_zone_hints'] = \
+                az_ext.convert_az_string_to_list(self.availability_zone_hints)
+        else:
+            ret_dict['availability_zone_hints'] = []
+
+        return ret_dict
+
+    @classmethod
+    def from_dict(cls, model_dict):
+        return super(UserDeviceMap, cls).from_dict(model_dict)
+
+
 SA_MODEL_TO_DATA_MODEL_MAP = {
     models.LoadBalancer: LoadBalancer,
     models.HealthMonitorV2: HealthMonitor,
@@ -972,7 +1000,8 @@ SA_MODEL_TO_DATA_MODEL_MAP = {
     servicetype_db.ProviderResourceAssociation: ProviderResourceAssociation,
     models.ACLGroup: ACLGroup,
     models.ACLRule: ACLRule,
-    models.ACLGroupListenerBinding: ACLGroupListenerBinding
+    models.ACLGroupListenerBinding: ACLGroupListenerBinding,
+    models.UserDeviceMap: UserDeviceMap
 }
 
 DATA_MODEL_TO_SA_MODEL_MAP = {
@@ -991,5 +1020,6 @@ DATA_MODEL_TO_SA_MODEL_MAP = {
     ProviderResourceAssociation: servicetype_db.ProviderResourceAssociation,
     ACLGroup: models.ACLGroup,
     ACLRule: models.ACLRule,
-    ACLGroupListenerBinding: models.ACLGroupListenerBinding
+    ACLGroupListenerBinding: models.ACLGroupListenerBinding,
+    UserDeviceMap: models.UserDeviceMap
 }

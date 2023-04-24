@@ -904,3 +904,24 @@ class LoadBalancerPluginBaseV2(service_base.ServicePluginBase):
     @abc.abstractmethod
     def remove_listener(self, context, acl_group_id, binding_info):
         pass
+
+    @abc.abstractmethod
+    def create_user_device_map(self, context, user_device_map):
+        pass
+
+    @abc.abstractmethod
+    def update_user_device_map(self, context, id, user_device_map):
+        pass
+
+    @abc.abstractmethod
+    def delete_user_device_map(self, context, id):
+        pass
+
+    @abc.abstractmethod
+    def get_user_device_maps(self, context, filters=None):
+        pass
+
+    @abc.abstractmethod
+    def get_user_device_map(self, context, id):
+        pass
+
