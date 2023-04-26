@@ -2022,7 +2022,7 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
     def _convert_user_device_map_az(self, map_dict):
         availability_zones = map_dict.get(az_ext.AZ_HINTS)
         if availability_zones:
-            self._validate_az_hints(availability_zones)
+            # self._validate_az_hints(availability_zones)
             az_hints = az_ext.convert_az_list_to_string(availability_zones)
             map_dict[az_ext.AZ_HINTS] = az_hints
         else:
