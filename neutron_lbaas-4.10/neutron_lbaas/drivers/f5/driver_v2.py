@@ -42,6 +42,7 @@ class F5LBaaSV2Driver(driver_base.LoadBalancerBaseDriver):
         self.l7rule = L7RuleManager(self)
         self.acl_group = ACLGroupManager(self)
         # self.acl_bind = ACLBindManager(self)
+        self.user_decive_map = UserDeviceMapManager()
 
         if not env:
             msg = "F5LBaaSV2Driver cannot be intialized because the " \
@@ -213,3 +214,35 @@ class ACLGroupManager(driver_base.BaseACLGroupManager):
         self.driver.f5.acl_group.update_acl_group(
             context, acl_group, loadbalancers
         )
+
+
+class UserDeviceMapManager(object):
+
+    def __init__(self):
+        self.eslb_node_ip = []
+        # if cfg.CONF.use_eslb_agent:
+        #     from neutron_lbaas.drivers.bcslb.database import db as bcslb_db
+        #     self.bcslb_db = bcslb_db.EslbVrsgVlan()
+        #     if hasattr(self.bcslb_db, "get_eslb_nfv_nodes_from_config_az"):
+        #         self.eslb_node_ip = self.bcslb_db.get_eslb_nfv_nodes_from_config_az(self.bcslb_db.conf_az)
+
+    def validate_ip(self, context, user_device_map):
+        ''' validate node ip of provider name is exist or not '''
+        node_ip_str = user_device_map.get('node_ip')
+        node_ip_list = []
+        for ips in node_ip_str.split(';'):
+            node_ip = set()
+            for ip in ips.split(','):
+                node_ip.add(ip)
+            node_ip_list.append(node_ip)
+
+        if self.eslb_node_ip:
+            exist = True
+            for ip_node in node_ip_list:
+                if ip_node in self.eslb_node_ip:
+                    continue
+                else:
+                    exist = False
+                    break
+            if not exist:
+                raise Exception('node_ip %s not found' % node_ip_str)

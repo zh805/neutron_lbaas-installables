@@ -15,6 +15,7 @@
 
 import copy
 import netaddr
+import IPy
 
 from neutron_lib import context as ncontext
 from neutron_lib.plugins import directory
@@ -45,6 +46,7 @@ from neutron_lbaas.db.loadbalancer import models
 from neutron_lbaas.extensions import acl as acl_ext
 from neutron_lbaas.extensions import l7
 from neutron_lbaas.extensions import lb_graph as lb_graph_ext
+from neutron_lbaas.extensions import lb_user_device_map
 from neutron_lbaas.extensions import lbaas_agentschedulerv2
 from neutron_lbaas.extensions import loadbalancerv2
 from neutron_lbaas.extensions import sharedpools
@@ -83,7 +85,8 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
                                    "service-type",
                                    "lb-graph",
                                    "lb_network_vip",
-                                   "hm_max_retries_down"]
+                                   "hm_max_retries_down",
+                                   "lb_user_device_map"]
     path_prefix = loadbalancerv2.LOADBALANCERV2_PREFIX
 
     agent_notifiers = (
@@ -201,12 +204,12 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             raise loadbalancerv2.DriverError(msg=e)
 
     def _handle_driver_error(self, context, db_entity):
-        try:
+        if hasattr(db_entity, "root_loadbalancer"):
             lb_id = db_entity.root_loadbalancer.id
             self.db.update_status(context, models.LoadBalancer, lb_id,
                                   n_constants.ERROR)
-        except Exception as e:
-            LOG.info('handle_driver_error %s', e)
+        else:
+            LOG.info('this operation does not deal loadbalancer status')
 
     def _eliminate_flavor(self, loadbalancer_obj):
         try:
@@ -2001,3 +2004,92 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
 
     def get_member(self, context, id, fields=None):
         pass
+
+    def _check_user_device_map_exists(self, context, map_id):
+        if not self.db._resource_exists(
+                context, models.UserDeviceMap, map_id):
+            raise lb_user_device_map.EntityNotFound(
+                name=models.UserDeviceMap.NAME, id=map_id)
+
+    def _validate_node_ip_address(self, ip_str):
+        try:
+            for ips in ip_str.split(';'):
+                for ip in ips.split(','):
+                    IPy.IP(ip).version()
+        except Exception:
+            raise lb_user_device_map.IPAddressInvalid(str=ip_str)
+
+    def _convert_user_device_map_az(self, map_dict):
+        availability_zones = map_dict.get(az_ext.AZ_HINTS)
+        if availability_zones:
+            # self._validate_az_hints(availability_zones)
+            az_hints = az_ext.convert_az_list_to_string(availability_zones)
+            map_dict[az_ext.AZ_HINTS] = az_hints
+        else:
+            map_dict[az_ext.AZ_HINTS] = None
+
+    def create_user_device_map(self, context, user_device_map):
+        user_device_map = user_device_map.get('user_device_map')
+        provider_name = user_device_map.get('provider')
+        self.validate_provider(provider_name)
+        node_ip = user_device_map.get('node_ip')
+        self._validate_node_ip_address(node_ip)
+        self._convert_user_device_map_az(user_device_map)
+        try:
+            driver = self._get_driver_for_provider(provider_name)
+            self._call_driver_operation(
+                context, driver.user_decive_map.validate_ip, user_device_map)
+        except Exception:
+            LOG.error('node_ip %s of creating user_device_map not found' % node_ip)
+            raise lb_user_device_map.NodeIpNotFound(
+                node_ip=node_ip)
+
+        try:
+            map_db = self.db.create_user_device_map(context, user_device_map)
+        except Exception:
+            raise lb_user_device_map.DBOperationFailed(
+                operation='create_user_device_map')
+        return self.db.get_user_device_map_as_api_dict(context, map_db.id)
+
+    def update_user_device_map(self, context, id, user_device_map):
+        self._check_user_device_map_exists(context, id)
+        user_device_map = user_device_map.get('user_device_map')
+        node_ip = user_device_map.get('node_ip')
+
+        if node_ip:
+            self._validate_node_ip_address(node_ip)
+            old_map_db = self.db.get_user_device_map_as_api_dict(context, id)
+            provider_name = old_map_db['provider']
+            try:
+                driver = self._get_driver_for_provider(provider_name)
+                self._call_driver_operation(
+                    context, driver.user_decive_map.validate_ip, user_device_map)
+            except Exception:
+                LOG.error('node_ip %s of updating user_device_map not found' % node_ip)
+                raise lb_user_device_map.NodeIpNotFound(
+                    node_ip=node_ip)
+        self._convert_user_device_map_az(user_device_map)
+
+        try:
+            updated_user_device_map = self.db.update_user_device_map(
+                context, id, user_device_map)
+        except Exception:
+            raise lb_user_device_map.DBOperationFailed(
+                operation='update_user_device_map')
+
+        return self.db.get_user_device_map_as_api_dict(
+            context, updated_user_device_map.id)
+
+    def delete_user_device_map(self, context, id):
+        self._check_user_device_map_exists(context, id)
+        try:
+            self.db.delete_user_device_map(context, id)
+        except Exception:
+            raise lb_user_device_map.DBOperationFailed(
+                operation='delete_user_device_map')
+
+    def get_user_device_maps(self, context, filters=None, fields=None):
+        return self.db.get_user_device_maps_as_api_dict(context, filters=filters)
+
+    def get_user_device_map(self, context, id, fields=None):
+        return self.db.get_user_device_map_as_api_dict(context, id)
