@@ -267,6 +267,11 @@ vpn-service-delete = neutronclient.neutron.v2_0.vpn.vpnservice:DeleteVPNService
 vpn-service-list = neutronclient.neutron.v2_0.vpn.vpnservice:ListVPNService
 vpn-service-show = neutronclient.neutron.v2_0.vpn.vpnservice:ShowVPNService
 vpn-service-update = neutronclient.neutron.v2_0.vpn.vpnservice:UpdateVPNService
+lbaas-user-device-map-list = neutronclient.neutron.v2_0.lb.v2.user_device_map:ListUserDeviceMap
+lbaas-user-device-map-show = neutronclient.neutron.v2_0.lb.v2.user_device_map:ShowUserDeviceMap
+lbaas-user-device-map-create = neutronclient.neutron.v2_0.lb.v2.user_device_map:CreateUserDeviceMap
+lbaas-user-device-map-update = neutronclient.neutron.v2_0.lb.v2.user_device_map:UpdateUserDeviceMap
+lbaas-user-device-map-delete = neutronclient.neutron.v2_0.lb.v2.user_device_map:DeleteUserDeviceMap
 
 [openstack.cli.extension]
 neutronclient = neutronclient.osc.plugin

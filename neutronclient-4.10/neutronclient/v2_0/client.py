@@ -583,6 +583,8 @@ class Client(ClientBase):
     lbaas_acl_group_path = "/lbaas/acl-groups/%s"
     lbaas_acl_rules_path = lbaas_acl_group_path + "/acl-rules"
     lbaas_acl_rule_path = lbaas_acl_rules_path + "/%s"
+    lbaas_user_device_maps_path = "/lbaas/user-device-maps"
+    lbaas_user_device_map_path = "/lbaas/user-device-maps/%s"
 
     vips_path = "/lb/vips"
     vip_path = "/lb/vips/%s"
@@ -787,6 +789,7 @@ class Client(ClientBase):
                      'underlayacl_rules': 'underlayacl_rule',
                      'lbaas_acl_groups': 'lbaas_acl_group',
                      'lbaas_acl_rules': 'lbaas_acl_rule',
+                     'lbaas_user_device_maps': 'lbaas_user_device_map',
                      }
 
     def list_ext(self, collection, path, retrieve_all, **_params):
@@ -2948,3 +2951,26 @@ class Client(ClientBase):
 
     def create_sync_resource(self, body=None):
         return self.post(self.sync_resources_path, body=body)
+
+    def list_lbaas_user_device_maps(self, retrieve_all=True, **_params):
+        """Fetches a list of all lbaas_user_device_maps for a project."""
+        return self.list('user_device_maps', self.lbaas_user_device_maps_path,
+                         retrieve_all, **_params)
+
+    def show_lbaas_user_device_map(self, lbaas_user_device_map, **_params):
+        """Fetches information for a lbaas_user_device_map."""
+        return self.get(self.lbaas_user_device_map_path % (lbaas_user_device_map),
+                        params=_params)
+
+    def create_lbaas_user_device_map(self, body=None):
+        """Creates a new lbaas_user_device_map."""
+        return self.post(self.lbaas_user_device_maps_path, body=body)
+
+    def update_lbaas_user_device_map(self, lbaas_user_device_map, body=None):
+        """Updates a lbaas_user_device_map."""
+        return self.put(self.lbaas_user_device_map_path % (lbaas_user_device_map),
+                        body=body)
+
+    def delete_lbaas_user_device_map(self, lbaas_user_device_map):
+        """Deletes the specified lbaas_user_device_map."""
+        return self.delete(self.lbaas_user_device_map_path % (lbaas_user_device_map))
