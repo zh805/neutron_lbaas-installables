@@ -52,6 +52,13 @@ class FlavorNotSupportedByProvider(nexception.BadRequest):
                 "while other providers support flavor 1-6")
 
 
+class FlavorNotSupportedConcurrencyConnection(nexception.BadRequest):
+    message = _("Flavor %(flavor_num)s does not support "
+                "parameters of max_concurrency and new_connection "
+                "while the input max_concurrency is %(max_concurrency)s "
+                "and new_connection is %(new_connection)s ")
+
+
 class RequiredAttributeNotSpecified(nexception.BadRequest):
     message = _("Required attribute %(attr_name)s not specified")
 
@@ -226,6 +233,11 @@ def _validate_keepalive_timeout_range(data, value=None):
         raise nexception.InvalidInput(error_message=msg)
 
 
+def _validate_concurrency_connection(data, value=None):
+    if data is not None:
+        converters.convert_to_int(data)
+
+
 validators.validators['type:connection_limit'] = _validate_connection_limit
 validators.validators['type:keepalive_timeout_range'] = _validate_keepalive_timeout_range
 validators.validators['type:conf_bw'] = _validate_bw_conf_and_value
@@ -286,6 +298,16 @@ RESOURCE_ATTRIBUTE_MAP = {
                                     'validate': {'type:az_list_or_none': None},
                                     'is_visible': True,
                                     'default': None},
+        'max_concurrency': {'allow_post': True, 'allow_put': True,
+                            'validate': {'type:concurrency_connection': None},
+                            'default': None, 'is_visible': True},
+        'new_connection': {'allow_post': True, 'allow_put': True,
+                           'validate': {'type:concurrency_connection': None},
+                           'default': None, 'is_visible': True},
+        'access_log': {'allow_post': True, 'allow_put': True,
+                       'default': False,
+                       'convert_to': converters.convert_to_boolean,
+                       'is_visible': True},
         'flavor': {'allow_post': True, 'allow_put': True,
                    'validate': {'type:range': [1, 13]},
                    'default': 1,

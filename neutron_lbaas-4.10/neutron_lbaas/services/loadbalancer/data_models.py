@@ -746,14 +746,15 @@ class LoadBalancer(BaseDataModel):
               'vip_port_id', 'vip_address', 'provisioning_status',
               'operating_status', 'admin_state_up', 'vip_port', 'stats',
               'provider', 'listeners', 'pools', 'flavor_id', 'bandwidth',
-              'availability_zone_hints', 'flavor']
+              'availability_zone_hints', 'flavor', 'max_concurrency', 'new_connection', 'access_log']
 
     def __init__(self, id=None, tenant_id=None, name=None, description=None,
                  vip_subnet_id=None, vip_port_id=None, vip_address=None,
                  provisioning_status=None, operating_status=None,
                  admin_state_up=None, vip_port=None, stats=None,
                  provider=None, listeners=None, pools=None, flavor_id=None,
-                 bandwidth=None, availability_zone_hints=None, flavor=None):
+                 bandwidth=None, availability_zone_hints=None, flavor=None,
+                 max_concurrency=None, new_connection=None, access_log=None):
         self.id = id
         self.tenant_id = tenant_id
         self.name = name
@@ -773,6 +774,9 @@ class LoadBalancer(BaseDataModel):
         self.pools = pools or []
         self.availability_zone_hints = availability_zone_hints
         self.flavor = flavor
+        self.max_concurrency = max_concurrency
+        self.new_connection = new_connection
+        self.access_log = access_log
 
     def attached_to_loadbalancer(self):
         return True

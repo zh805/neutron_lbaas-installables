@@ -43,7 +43,7 @@ class ListLoadBalancer(neutronV20.ListCommand):
     """LBaaS v2 List loadbalancers that belong to a given tenant."""
 
     resource = 'loadbalancer'
-    list_columns = ['id', 'name', 'vip_address', 'bandwidth',
+    list_columns = ['id', 'name', 'vip_address', 'bandwidth', 'max_concurrency', 'new_connection',
                     'provisioning_status', 'provider', 'availability_zone_hints', 'flavor']
     pagination_support = True
     sorting_support = True
@@ -73,11 +73,22 @@ class CreateLoadBalancer(neutronV20.CreateCommand):
             '--bandwidth',
             help=_('Bandwidth for the load balancer.'))
         parser.add_argument(
+            '--max-concurrency',
+            help=_('Max concurrency for the load balancer.'))
+        parser.add_argument(
+            '--new-connection',
+            help=_('New connection for the load balancer.'))
+        parser.add_argument(
             '--vip-address',
             help=_('VIP address for the load balancer.'))
         parser.add_argument(
             'vip_subnet', metavar='VIP_SUBNET',
             help=_('Load balancer VIP subnet.'))
+        utils.add_boolean_argument(
+            parser, '--access-log',
+            dest='access_log',
+            help=_('Whether to up access log. '
+                   '(True meaning "Up")'))
         availability_zone.add_az_hint_argument(parser, self.resource)
 
     def args2body(self, parsed_args):
@@ -88,7 +99,7 @@ class CreateLoadBalancer(neutronV20.CreateCommand):
 
         neutronV20.update_dict(parsed_args, body,
                                ['provider', 'vip_address', 'tenant_id',
-                                'bandwidth'])
+                                'bandwidth', 'max_concurrency', 'new_connection', 'access_log'])
         _parse_common_args(body, parsed_args)
         availability_zone.args2body_az_hint(parsed_args, body)
         return {self.resource: body}
@@ -107,6 +118,17 @@ class UpdateLoadBalancer(neutronV20.UpdateCommand):
         parser.add_argument(
             '--bandwidth',
             help=_('Bandwidth for the load balancer.'))
+        parser.add_argument(
+            '--max-concurrency',
+            help=_('Max concurrency for the load balancer.'))
+        parser.add_argument(
+            '--new-connection',
+            help=_('New connection for the load balancer.'))
+        utils.add_boolean_argument(
+            parser, '--access-log',
+            dest='access_log',
+            help=_('Whether to up access log. '
+                   '(True meaning "Up")'))
         _add_common_args(parser)
 
     def args2body(self, parsed_args):
@@ -114,7 +136,10 @@ class UpdateLoadBalancer(neutronV20.UpdateCommand):
         _parse_common_args(body, parsed_args)
         neutronV20.update_dict(parsed_args, body,
                                ['admin_state_up',
-                                'bandwidth'])
+                                'access_log',
+                                'bandwidth',
+                                'max_concurrency',
+                                'new_connection'])
         return {self.resource: body}
 
 
