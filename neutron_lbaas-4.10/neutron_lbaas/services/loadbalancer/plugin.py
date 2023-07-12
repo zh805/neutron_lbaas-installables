@@ -863,8 +863,20 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
             loadbalancer[az_ext.AZ_HINTS] = None
         provider_name = self._get_provider_name(loadbalancer)
         flavor = loadbalancer.get('flavor')
+        max_concurrency = loadbalancer.get('max_concurrency')
+        new_connection = loadbalancer.get('new_connection')
         self._validate_flavor(flavor=flavor,
                               provider_name=provider_name)
+        if flavor != 21:
+            if max_concurrency or new_connection:
+                LOG.error('max_concurrency and new_connection are not supported by flavor %s '
+                          'while the input max_concurrency and new_connection are %s, %s' %
+                          (flavor, max_concurrency, new_connection))
+                raise loadbalancerv2.FlavorNotSupportedConcurrencyConnection(
+                    flavor_num=flavor,
+                    max_concurrency=max_concurrency,
+                    new_connection=new_connection
+                )
         driver = self.drivers[provider_name]
         lb_db = self.db.create_loadbalancer(
             context, loadbalancer,
@@ -921,9 +933,22 @@ class LoadBalancerPluginv2(loadbalancerv2.LoadBalancerPluginBaseV2,
         flavor = loadbalancer.get('flavor')
         old_lb = self.db.get_loadbalancer(context, id)
         provider_name = old_lb.provider.provider_name
+        old_flavor = old_lb.flavor
+        max_concurrency = loadbalancer.get('max_concurrency')
+        new_connection = loadbalancer.get('new_connection')
         if flavor is not None:
             self._validate_flavor(flavor=flavor,
                                   provider_name=provider_name)
+        if old_flavor != 21:
+            if max_concurrency or new_connection:
+                LOG.error('max_concurrency and new_connection are not supported by flavor %s '
+                          'while the input max_concurrency and new_connection are %s, %s' %
+                          (old_flavor, max_concurrency, new_connection))
+                raise loadbalancerv2.FlavorNotSupportedConcurrencyConnection(
+                    flavor_num=old_flavor,
+                    max_concurrency=max_concurrency,
+                    new_connection=new_connection
+                )
         self.db.test_and_set_status(context, models.LoadBalancer, id,
                                     n_constants.PENDING_UPDATE)
         try:

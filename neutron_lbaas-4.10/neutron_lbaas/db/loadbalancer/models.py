@@ -279,6 +279,8 @@ class LoadBalancer(model_base.BASEV2, model_base.HasId, model_base.HasProject):
         'ports.id', name='fk_lbaas_loadbalancers_ports_id'))
     vip_address = sa.Column(sa.String(36))
     bandwidth = sa.Column(sa.Integer(), nullable=True)
+    max_concurrency = sa.Column(sa.Integer(), nullable=True)
+    new_connection = sa.Column(sa.Integer(), nullable=True)
     provisioning_status = sa.Column(sa.String(16), nullable=False)
     operating_status = sa.Column(sa.String(16), nullable=False)
     admin_state_up = sa.Column(sa.Boolean(), nullable=False)
@@ -302,6 +304,7 @@ class LoadBalancer(model_base.BASEV2, model_base.HasId, model_base.HasProject):
     flavor_id = sa.Column(sa.String(36), sa.ForeignKey(
         'flavors.id', name='fk_lbaas_loadbalancers_flavors_id'))
     availability_zone_hints = sa.Column(sa.String(255), nullable=True)
+    access_log = sa.Column(sa.Boolean(), nullable=False)
 
     @property
     def root_loadbalancer(self):
@@ -322,7 +325,8 @@ class LoadBalancer(model_base.BASEV2, model_base.HasId, model_base.HasProject):
         ret_dict = to_dict(self, [
             'id', 'tenant_id', 'name', 'description',
             'vip_subnet_id', 'vip_port_id', 'vip_address', 'operating_status',
-            'provisioning_status', 'admin_state_up', 'flavor_id', 'flavor'])
+            'provisioning_status', 'admin_state_up', 'flavor_id', 'flavor', 'max_concurrency',
+            'new_connection', 'access_log'])
         ret_dict['listeners'] = [{'id': listener.id}
                                  for listener in self.listeners]
         ret_dict['pools'] = [{'id': pool.id} for pool in self.pools]
