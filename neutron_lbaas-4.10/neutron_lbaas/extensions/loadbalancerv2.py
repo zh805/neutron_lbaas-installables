@@ -241,6 +241,7 @@ def _validate_concurrency_connection(data, value=None):
 validators.validators['type:connection_limit'] = _validate_connection_limit
 validators.validators['type:keepalive_timeout_range'] = _validate_keepalive_timeout_range
 validators.validators['type:conf_bw'] = _validate_bw_conf_and_value
+validators.validators['type:concurrency_connection'] = _validate_concurrency_connection
 validators.add_validator('type:az_list_or_none',
                          _validate_az_list_or_none)
 
