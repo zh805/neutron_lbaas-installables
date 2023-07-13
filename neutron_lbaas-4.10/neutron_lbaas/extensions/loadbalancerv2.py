@@ -238,12 +238,23 @@ def _validate_concurrency_connection(data, value=None):
         converters.convert_to_int(data)
 
 
+def _validate_flavor_range(data, rule=None):
+    flavor_range = [1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 21]
+
+    if data not in flavor_range:
+        msg = (_("Notice: eslb support flavor 10, "
+                 "other providers support flavor 1-8, 11-13, 21"
+                 "while the input flavor is %s") % data)
+        raise nexception.InvalidInput(error_message=msg)
+
+
 validators.validators['type:connection_limit'] = _validate_connection_limit
 validators.validators['type:keepalive_timeout_range'] = _validate_keepalive_timeout_range
 validators.validators['type:conf_bw'] = _validate_bw_conf_and_value
 validators.validators['type:concurrency_connection'] = _validate_concurrency_connection
 validators.add_validator('type:az_list_or_none',
                          _validate_az_list_or_none)
+validators.validators['type:flavor_range'] = _validate_flavor_range
 
 
 RESOURCE_ATTRIBUTE_MAP = {
@@ -310,7 +321,7 @@ RESOURCE_ATTRIBUTE_MAP = {
                        'convert_to': converters.convert_to_boolean,
                        'is_visible': True},
         'flavor': {'allow_post': True, 'allow_put': True,
-                   'validate': {'type:range': [1, 13]},
+                   'validate': {'type:flavor_range': None},
                    'default': 1,
                    'convert_to': converters.convert_to_int,
                    'is_visible': True},
